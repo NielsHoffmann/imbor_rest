@@ -1,5 +1,3 @@
-import json
-import rdflib
 import datetime
 import uuid
 import hashlib
@@ -10,13 +8,18 @@ import urllib.parse
 
 
 
-class ImnborOtl:
+class CrowLdp:
 
-    #def __init__(self):
-    #     self.clientId = connection_data["clientId"]
-    #     self.toolId = connection_data["toolId"]
-    #     self.privateKey = connection_data["privateKey"]
-    #     self.base_url = connection_data["base_url"]
+    def __init__(self, clientId, toolId, privateKey, base_url):
+        self.clientId = clientId
+        self.toolId = toolId
+        self.privateKey = privateKey
+        self.base_url = base_url
+
+        # print("clientId: " + str(self.clientId))
+        # print("toolId: " + str(self.toolId))
+        # print("privateKey: " + str(self.privateKey))
+        # print("base_url: " + str(self.base_url))
 
 
     # Functie om de HMAC signature te berekenen, zie documentatie van CROW voor de benodigde parameters
@@ -37,7 +40,7 @@ class ImnborOtl:
                 md5 = hashlib.md5(req.data.encode('utf-8')).hexdigest()
                 message += "," + contentType + "," + md5
 
-        # print(message)
+        #print(message)
         value = bytes(message, 'utf-8')
         # privateKey wordt eerder in het notebook opgehaald, net als clientId
         privkey = bytes(self.privateKey, 'utf-8')
@@ -61,7 +64,7 @@ class ImnborOtl:
         req = Request("POST", url, data=payload)
         headers = {'Content-Type': "application/sparql-query"}
         req.headers = headers
-        auth = self.get_hmac( req, url)
+        auth = self.get_hmac(req, url)
         #print(auth)
         headers = {
             'Authorization': auth,

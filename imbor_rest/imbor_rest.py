@@ -1,129 +1,272 @@
 from flask import Flask, request, jsonify
 from flasgger import Swagger
 from flask_talisman import Talisman
-from .sparql_queries import  ImnborOtl
-import json
+from .crow_ldp_caller import CrowLdp
+from .queries import OtlQueries
+
 
 app = Flask(__name__)
+app.config.from_pyfile(r'./config/ldp_config.cfg')
+#print(f"key: {app.config['PRIVATEKEY']}")
 #Talisman(app)
 
-imborotl = ImnborOtl(
-  #connection_data=json.load(open("~/Stuff/config.json"))
+crow_ldp = CrowLdp(
+    clientId=app.config['CLIENTID'], toolId=app.config['TOOLID'], privateKey=app.config['PRIVATEKEY'], base_url=app.config['BASE_URL']
 )
+
+otl_queries = OtlQueries()
 
 swagger = Swagger(app,
-  template= {
-    "swagger": "3.0",
-    "openapi": "3.0.0",
-    "info": {
-        "title": "imbor",
-        "version": "0.0.1",
-    },
-    "components": {
-      "schemas": {
-        "Collecties": {
-          "properties": {
-            "naam": {
-              "type": "string"
-            }
-          }
-        },
-        "Vakdisciplines": {
-          "properties": {
-            "naam": {
-              "type": "string"
-            }
-          }
-        }
-      }
-    }
-  }
-)
+                  template={
+                      "swagger": "3.0",
+                      "openapi": "3.0.0",
+                      "info": {
+                          "title": "imbor",
+                          "version": "0.0.1",
+                      },
+                      "components": {
+                          "schemas": {
+                              "Collecties": {
+                                  "properties": {
+                                      "naam": {
+                                          "type": "string"
+                                      }
+                                  }
+                              },
+                              "Vakdisciplines": {
+                                  "properties": {
+                                      "VakdisciplineURI": {
+                                          "type": "string",
+                                          "format": "uri"
+                                      },
+                                      "VakdisciplineLabel": {
+                                          "type": "string"
+                                      }
+                                  }
+                              },
+                              "Objecttypegroepen": {
+                                  "properties": {
+                                      "objecttypegroepURI": {
+                                          "type": "string",
+                                          "format": "uri"
+                                      },
+                                      "objecttypegroepLabel": {
+                                          "type": "string"
+                                      }
+                                  }
+                              },
+                              "Objecttypen":{
+                                  "properties": {
+                                      "VakdisciplineURI": {
+                                          "type": "string",
+                                          "format": "uri"
+                                      },
+                                      "VakdisciplineLabel": {
+                                          "type": "string"
+                                      },
+                                      "FysiekObjectURI": {
+                                          "type": "string",
+                                          "format": "uri"
+                                      },
+                                      "FysiekObjectLabel": {
+                                          "type": "string"
+                                      }
+                                  }
+                              },
+                              "beheerobjecten":{
+                                  "properties": {
+                                      "FysiekObjectURI": {
+                                          "type": "string",
+                                          "format": "uri"
+                                      },
+                                      "FysiekObjectLabel": {
+                                          "type": "string"
+                                      },
+                                      "FysiekObjectDefinitie": {
+                                          "type": "string"
+                                      },
+
+                                  }
+                              },
+                              "beheerobject_eigenschappen":{
+                                  "properties": {
+                                      "FysiekObjectURI": {
+                                          "type": "string",
+                                          "format": "uri"
+                                      },
+                                      "FysiekObjectLabel":{
+                                          "type": "string"
+                                      },
+                                      "EigenschapURI":{
+                                          "type": "string",
+                                          "format": "uri"
+                                      },
+                                      "EigenschapLabel":{
+                                          "type": "string"
+                                      },
+                                      "EigenschapVanObjectLabel":{
+                                          "type": "string"
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+                  )
 
 
 
-def get_auth(request):
-  headers = request.headers
-  auth = headers.get("X-Api-Key")
-  if auth == 'asoidewfoef':
-    return True
-  else:
-    return False
+@app.route("/collecties/")
+def get_collecties():
+    """
+    Get all collecties
+    ---
+    description: Get all collecties.
+    tags:
+      - collecties
+    responses:
+      200:
+        description: List of all collecties.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Collecties'
+
+    """
+
+    res = crow_ldp.run_query(otl_queries.selecteer_collecties())
+
+    return res, 200
 
 
-@app.route("/collecties")
-def get_collections():
-  """
-  Get all collecties
-  ---
-  description: Get all collecties.
-  tags:
-    - collecties
-  responses:
-    200:
-      description: List of all collecties.
-      content:
-        application/json:
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Collecties'
-
-  """
-  if get_auth(request):
-    q = """PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-            PREFIX groep: <http://linkeddata.crow.nl/imbor/def/groepering/>
-
-          SELECT (?memberLabel as ?collecties)
-          WHERE {
-              groep:IMBORHierarchischeCollectie skos:member ?member .
-              ?member skos:prefLabel ?memberLabel .
-          } order by ?member"""
-    res = imborotl.run_query(q)
-
-    return jsonify([{
-      res
-    }]), 200
-  else:
-    return jsonify({"message": "ERROR: Unauthorized"}), 401
-
-@app.route("/vakdisciplines")
+@app.route("/vakdisciplines/")
 def get_vakdisciplines():
-  """
-  Get all valdisciplines
-  ---
-  description: Get all valdisciplines.
-  tags:
-    - collecties
-  responses:
-    200:
-      description: List of all valdisciplines.
-      content:
-        application/json:
+    """
+    Get all vakdisciplines
+    ---
+    description: Get all vakdisciplines.
+    tags:
+      - vakdisciplines
+    responses:
+      200:
+        description: List of all vakdisciplines.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Vakdisciplines'
+
+    """
+
+    res = crow_ldp.run_query(otl_queries.selecteer_vakdisciplines())
+
+    return res, 200
+
+@app.route("/objecttypegroepen/")
+def get_objecttypegroepen():
+    """
+    Get all objecttypegroepen
+    ---
+    description: Get all objecttypegroepen.
+    tags:
+      - objecttypegroepen
+    responses:
+      200:
+        description: List of all objecttypegroepen.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Objecttypegroepen'
+
+    """
+
+    res = crow_ldp.run_query(otl_queries.selecteer_objecttypegroepen())
+
+    return res, 200
+
+@app.route("/vakdisciplines/<string:discipline>/")
+def get_objecttypen_per_vakdiscipline(discipline):
+    """
+    Get all objecttypen per vakdiscipline
+    ---
+    description: Get all objecttypen per vakdiscipline.
+    tags:
+      - vakdisciplines
+    parameters:
+        - name: discipline
+          in: path
+          required: true
+          description: De discipline naam
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Valdisciplines'
+              type: string
+    responses:
+      200:
+        description: List of all objecttypen per vakdisciplines.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Objecttypen'
 
-  """
-  q = """
-    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-    PREFIX groep: <http://linkeddata.crow.nl/publication-v2/ns/crow/imbor/def/groepering/>
+    """
 
-    SELECT ?VakdisciplineURI ?VakdisciplineLabel
-      WHERE {
-        groep:IMBORVakdisciplineCollectie skos:member ?VakdisciplineURI .
-        ?VakdisciplineURI skos:prefLabel ?VakdisciplineLabel .
-      }
-  """
-  res = imborotl.run_query(q)
-  print("result: " + str(res))
-  #return jsonify([{
-  #  res
-  #}]), 200
-  return res, 200
+    res = crow_ldp.run_query(otl_queries.selecteer_objecttypen_per_vakdiscipline(discipline))
 
-@app.route("/collectie/<string:naam>")
-def get_todo(naam):
+    return res, 200
 
-    return jsonify({ 'error': 'not implemented yet.' }), 400
+
+@app.route("/beheerobjecten/")
+def get_beheerobjecten():
+    """
+    Get all beheerobjecten
+    ---
+    description: Get all beheerobjecten.
+    tags:
+      - beheerobjecten
+    responses:
+      200:
+        description: alle beheerobjecten.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/beheerobjecten'
+
+    """
+
+    res = crow_ldp.run_query(otl_queries.selecteer_beheerobjecten())
+
+    return res, 200
+
+
+@app.route("/beheerobjecten/<string:beheerobject>/")
+def get_eigenschappen_per_beheerobject(beheerobject):
+    """
+    Get all eigenschappen per beheerobject
+    ---
+    description: Get all eigenschappen per beheerobject.
+    tags:
+      - beheerobjecten
+    parameters:
+        - name: beheerobject
+          in: path
+          required: true
+          description: beheerobject naam
+          schema:
+              type: string
+    responses:
+      200:
+        description: alle eigenschappen van het beheerobject.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/beheerobject_eigenschappen'
+
+    """
+
+    res = crow_ldp.run_query(otl_queries.selecteer_eigenschappen_per_beheerobject(beheerobject))
+
+    return res, 200
