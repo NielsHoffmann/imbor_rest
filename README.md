@@ -16,6 +16,7 @@ Deze queries worden ervolgens aangeboden via een rest endpoint.
 ### Afhankelijkheden
 * Python 3
 * flask
+* flask-cors
 * flasgger
 * requests
 * urllib

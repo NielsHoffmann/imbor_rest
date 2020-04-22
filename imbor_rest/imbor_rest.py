@@ -3,11 +3,13 @@ from flasgger import Swagger
 from flask_talisman import Talisman
 from .crow_ldp_caller import CrowLdp
 from .queries import OtlQueries
-
+from flask_cors import CORS
 
 app = Flask(__name__)
 #let op, hier verwijzen naar de juiste config file met api keys
 app.config.from_pyfile(r'./config/ldp_config.cfg')
+if app.config['CORS']:
+    cors = CORS(app)
 #TODO: https implementeren...
 #Talisman(app)
 
