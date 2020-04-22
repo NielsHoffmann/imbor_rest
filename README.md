@@ -4,8 +4,7 @@ Demo rest api voor imbor ontologie
 ### Doel
 Dit is een demo applicatie voor het implementeren van een REST API gebaseerd op de Open Api Specification 3.0.
 
-![screenshot van de user interface]
-(https://github.com/NielsHoffmann/imbor_rest/blob/master/screenshot.png)
+![screenshot van de user interface](https://github.com/NielsHoffmann/imbor_rest/blob/master/screenshot.png)
 
 Deze applicatie gebruikt de API key die het CROW uitgeeft om sparql queries te doen op het linked data platform van het CROW. 
 Deze queries worden ervolgens aangeboden via een rest endpoint.
