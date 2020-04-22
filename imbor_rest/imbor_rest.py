@@ -6,8 +6,9 @@ from .queries import OtlQueries
 
 
 app = Flask(__name__)
+#let op, hier verwijzen naar de juiste config file met api keys
 app.config.from_pyfile(r'./config/ldp_config.cfg')
-#print(f"key: {app.config['PRIVATEKEY']}")
+#TODO: https implementeren...
 #Talisman(app)
 
 crow_ldp = CrowLdp(
@@ -22,7 +23,7 @@ swagger = Swagger(app,
                       "openapi": "3.0.0",
                       "info": {
                           "title": "imbor",
-                          "version": "0.0.1",
+                          "version": "0.1.0",
                       },
                       "components": {
                           "schemas": {
